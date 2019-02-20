@@ -42,6 +42,10 @@
 #ifdef __cplusplus
  extern "C" {
 #endif /* __cplusplus */
+#define INVALID_SOCKET (~0)
+#define SOCKET_ERROR (-1)
+typedef int     SOCKET;
+
 
 #define MB_PORT_TAG "MB_PORT"
 

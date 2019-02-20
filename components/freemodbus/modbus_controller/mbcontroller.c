@@ -29,7 +29,7 @@
 #include "mbcontroller.h"
 
 static const char* TAG = "MB_CONTROLLER";
-
+#define MB_LOG(...) ESP_LOGW(__VA_ARGS__)
 #define MB_CHECK(a, ret_val, str, ...) \
     if (!(a)) { \
         ESP_LOGE(TAG, "%s(%u): " str, __FUNCTION__, __LINE__, ##__VA_ARGS__); \
@@ -115,11 +115,11 @@ static esp_err_t send_param_info(mb_event_group_t par_type, uint16_t mb_offset,
     par_info.mb_offset = mb_offset;
     BaseType_t status = xQueueSend(mb_controller_notification_queue_handle, &par_info, MB_PAR_INFO_TOUT);
     if (pdTRUE == status) {
-        ESP_LOGD(TAG, "Queue send parameter info (type, address, size): %d, 0x%.4x, %d",
+        ESP_LOGI(TAG, "Queue send parameter info (type, address, size): %d, 0x%.4x, %d",
                 par_type, (uint32_t)par_address, par_size);
         error = ESP_OK;
     } else if (errQUEUE_FULL == status) {
-        ESP_LOGD(TAG, "Parameter queue is overflowed.");
+        ESP_LOGI(TAG, "Parameter queue is overflowed.");
     }
     return error;
 }
@@ -129,7 +129,7 @@ static esp_err_t send_param_access_notification(mb_event_group_t event)
     esp_err_t err = ESP_FAIL;
     mb_event_group_t bits = (mb_event_group_t)xEventGroupSetBits(mb_controller_event_group, (EventBits_t)event);
     if (bits & event) {
-        ESP_LOGD(TAG, "The MB_REG_CHANGE_EVENT = 0x%.2x is set.", (uint8_t)event);
+        ESP_LOGI(TAG, "The MB_REG_CHANGE_EVENT = 0x%.2x is set.", (uint8_t)event);
         err = ESP_OK;
     }
     return err;
@@ -145,9 +145,12 @@ static void modbus_task(void *pvParameters) {
                                                 pdFALSE,
                                                 portMAX_DELAY);
         // Check if stack started then poll for data
+	
+       ESP_LOGI(TAG,"MB_EVENT_STACK_STARTED");
         if (status & MB_EVENT_STACK_STARTED) {
             (void)eMBPoll(); // allow stack to process data
-            (void)xMBPortSerialTxPoll(); // Send response buffer if ready
+		    ESP_LOGI(TAG,"eMBPoll called");
+     //       (void)xMBPortSerialTxPoll(); // Send response buffer if ready
         }
     }
 }
@@ -156,6 +159,7 @@ static void modbus_task(void *pvParameters) {
 mb_event_group_t mbcontroller_check_event(mb_event_group_t group)
 {
     assert(mb_controller_event_group != NULL);
+    MB_LOG(TAG,"mbcontroller_check_event");
     BaseType_t status = xEventGroupWaitBits(mb_controller_event_group, (BaseType_t)group,
                                             pdTRUE , pdFALSE, portMAX_DELAY);
     return (mb_event_group_t)status;
@@ -175,12 +179,13 @@ esp_err_t mbcontroller_set_descriptor(const mb_register_area_descriptor_t descr_
     mb_area_descriptors[descr_info.type].start_offset = descr_info.start_offset;
     mb_area_descriptors[descr_info.type].address = (uint8_t*)descr_info.address;
     mb_area_descriptors[descr_info.type].size = descr_info.size;
+    MB_LOG(TAG,"mb_area_descriptors setup");
     return ESP_OK;
 }
 
 // Initialization of Modbus controller
 esp_err_t mbcontroller_init(void) {
-    mb_type = MB_MODE_RTU;
+    mb_type = MB_MODE_TCP;
     mb_address = MB_DEVICE_ADDRESS;
     mb_port = MB_UART_PORT;
     mb_speed = MB_DEVICE_SPEED;
@@ -235,14 +240,15 @@ esp_err_t mbcontroller_start(void)
 {
     eMBErrorCode status = MB_EIO;
     // Initialize Modbus stack using mbcontroller parameters
-    status = eMBInit((eMBMode)mb_type, (UCHAR)mb_address, (UCHAR)mb_port,
-                            (ULONG)mb_speed, (eMBParity)mb_parity);
+    status = eMBTCPInit(MB_TCP_PORT_USE_DEFAULT);
+/*    		(eMBMode)mb_type, (UCHAR)mb_address, (UCHAR)mb_port,
+                            (ULONG)mb_speed, (eMBParity)mb_parity); */
     MB_CHECK((status == MB_ENOERR), ESP_ERR_INVALID_STATE,
             "mb stack initialization failure, eMBInit() returns (0x%x).", status);
-#ifdef CONFIG_MB_CONTROLLER_SLAVE_ID_SUPPORT
-    status = eMBSetSlaveID(MB_SLAVE_ID_SHORT, TRUE, (UCHAR*)mb_slave_id, sizeof(mb_slave_id));
-    MB_CHECK((status == MB_ENOERR), ESP_ERR_INVALID_STATE, "mb stack set slave ID failure.");
-#endif
+//#ifdef CONFIG_MB_CONTROLLER_SLAVE_ID_SUPPORT
+//    status = eMBSetSlaveID(MB_SLAVE_ID_SHORT, TRUE, (UCHAR*)mb_slave_id, sizeof(mb_slave_id));
+//    MB_CHECK((status == MB_ENOERR), ESP_ERR_INVALID_STATE, "mb stack set slave ID failure.");
+//#endif
     status = eMBEnable();
     MB_CHECK((status == MB_ENOERR), ESP_ERR_INVALID_STATE,
             "mb stack set slave ID failure, eMBEnable() returned (0x%x).", (uint32_t)status);
@@ -251,6 +257,7 @@ esp_err_t mbcontroller_start(void)
                                             (EventBits_t)MB_EVENT_STACK_STARTED);
     MB_CHECK((flag & MB_EVENT_STACK_STARTED),
                 ESP_ERR_INVALID_STATE, "mb stack start event set error.");
+    MB_LOG(TAG,"mbcontroller_start done");
     return ESP_OK;
 }
 
@@ -284,15 +291,16 @@ esp_err_t mbcontroller_setup(const mb_communication_info_t comm_info)
     MB_CHECK((comm_info.slave_addr <= MB_ADDRESS_MAX),
                 ESP_ERR_INVALID_ARG, "mb wrong slave address = (0x%x).",
                 (uint32_t)comm_info.slave_addr);
-    MB_CHECK((comm_info.port <= UART_NUM_2), ESP_ERR_INVALID_ARG,
-                "mb wrong port to set = (0x%x).", (uint32_t)comm_info.port);
+    //MB_CHECK((comm_info.port <= UART_NUM_2), ESP_ERR_INVALID_ARG,
+      //          "mb wrong port to set = (0x%x).", (uint32_t)comm_info.port);
     MB_CHECK((comm_info.parity <= UART_PARITY_EVEN), ESP_ERR_INVALID_ARG,
                 "mb wrong parity option = (0x%x).", (uint32_t)comm_info.parity);
     mb_type = (uint8_t)comm_info.mode;
     mb_address = (uint8_t)comm_info.slave_addr;
     mb_port = (uint8_t)comm_info.port;
-    mb_speed = (uint32_t)comm_info.baudrate;
-    mb_parity = (uint8_t)comm_info.parity;
+//    mb_speed = (uint32_t)comm_info.baudrate;
+//    mb_parity = (uint8_t)comm_info.parity;
+    MB_LOG(TAG,"mbcontroller_setup done");
     return ESP_OK;
 }
 

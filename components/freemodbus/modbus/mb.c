@@ -54,9 +54,10 @@
 #endif
 
 #ifndef MB_PORT_HAS_CLOSE
-#define MB_PORT_HAS_CLOSE 0
+#define MB_PORT_HAS_CLOSE 1
 #endif
-
+static const char* TAG = "MB_C";
+#define MB_LOG(...) ESP_LOGW(__VA_ARGS__)
 /* ----------------------- Static variables ---------------------------------*/
 
 static UCHAR    ucMBAddress;
@@ -346,7 +347,7 @@ eMBPoll( void )
     {
         return MB_EILLSTATE;
     }
-
+    MB_LOG(TAG,"Poll is called waiting on Event");
     /* Check if there is a event available. If not return control to caller.
      * Otherwise we will handle the event. */
     if( xMBPortEventGet( &eEvent ) == TRUE )
@@ -354,9 +355,11 @@ eMBPoll( void )
         switch ( eEvent )
         {
         case EV_READY:
+    	MB_LOG(TAG,"EV_READY");
             break;
 
         case EV_FRAME_RECEIVED:
+    	MB_LOG(TAG,"EV_FRAME_RECEIVED");
             eStatus = peMBFrameReceiveCur( &ucRcvAddress, &ucMBFrame, &usLength );
             if( eStatus == MB_ENOERR )
             {
@@ -369,6 +372,7 @@ eMBPoll( void )
             break;
 
         case EV_EXECUTE:
+	    	MB_LOG(TAG,"EV_EXECUTE");
             ucFunctionCode = ucMBFrame[MB_PDU_FUNC_OFF];
             eException = MB_EX_ILLEGAL_FUNCTION;
             for( i = 0; i < MB_FUNC_HANDLERS_MAX; i++ )
@@ -405,6 +409,7 @@ eMBPoll( void )
             break;
 
         case EV_FRAME_SENT:
+	    	MB_LOG(TAG,"EV_FRAME_SENT");
             break;
         }
     }

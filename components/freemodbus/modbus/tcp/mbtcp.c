@@ -74,7 +74,8 @@
 #define MB_TCP_FUNC         7
 
 #define MB_TCP_PROTOCOL_ID  0   /* 0 = Modbus Protocol */
-
+static const char* TAG = "MB_TCP_C";
+#define MB_LOG(...) ESP_LOGW(__VA_ARGS__)
 
 /* ----------------------- Start implementation -----------------------------*/
 eMBErrorCode
@@ -86,12 +87,14 @@ eMBTCPDoInit( USHORT ucTCPPort )
     {
         eStatus = MB_EPORTERR;
     }
+	MB_LOG(TAG,"xMBTCPPortInit");
     return eStatus;
 }
 
 void
 eMBTCPStart( void )
 {
+	MB_LOG(TAG,"xMBTCPStart");
 }
 
 void
@@ -113,6 +116,8 @@ eMBTCPReceive( UCHAR * pucRcvAddress, UCHAR ** ppucFrame, USHORT * pusLength )
     {
         usPID = pucMBTCPFrame[MB_TCP_PID] << 8U;
         usPID |= pucMBTCPFrame[MB_TCP_PID + 1];
+
+	MB_LOG(TAG,"xMBTCPReceive");
 
         if( usPID == MB_TCP_PROTOCOL_ID )
         {

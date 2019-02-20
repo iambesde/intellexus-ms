@@ -8,6 +8,16 @@
 #define _DEVICE_PARAMS
 
 #define A24_ARR_SIZE 24
+typedef enum {
+    MB_ENOERR,    /*!< no error. */
+    MB_ENOREG,    /*!< illegal register address. */
+    MB_EINVAL,    /*!< illegal argument. */
+    MB_EPORTERR,  /*!< porting layer error. */
+    MB_ENORES,    /*!< insufficient resources. */
+    MB_EIO,       /*!< I/O error. */
+    MB_EILLSTATE, /*!< protocol stack in illegal state. */
+    MB_ETIMEDOUT  /*!< timeout error occurred. */
+} eMBErrorCode;
 
 // This file defines structure of modbus parameters which reflect correspond modbus address space
 // for each modbus register type (coils, discreet inputs, holding registers, input registers)
@@ -77,13 +87,7 @@ typedef struct
 typedef struct
 {
     // Parameter: Data channel 0 : DataChan0
-    float data_chan0;
-    // Parameter: Data channel 1 : DataChan1
-    float data_chan1;
-    // Parameter: Data channel 2 : DataChan2
-    float data_chan2;
-    // Parameter: Data channel 3 : DataChan3
-    float data_chan3;
+    float data_chan[10];
     // Parameter: Protocol version  : protocol_version
     uint16_t protocol_version;
     // Parameter: Hardware version  : hardware_version

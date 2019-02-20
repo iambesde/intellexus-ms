@@ -1,110 +1,74 @@
 /*
- * FreeModbus Libary: ESP32 Port Demo Application
- * Copyright (C) 2010 Christian Walter <cwalter@embedded-solutions.at>
+ * FreeModbus Libary: Win32 Port
+ * Copyright (C) 2006 Christian Walter <wolti@sil.at>
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *   notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *   notice, this list of conditions and the following disclaimer in the
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
- *   documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *   derived from this software without specific prior written permission.
- * 
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * IF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
  *
- * File: $Id: portevent.c,v 1.1 2010/06/06 13:07:20 wolti Exp $
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+ *
+ * File: $Id: portevent.c,v 1.1 2007/09/12 10:15:56 wolti Exp $
  */
 
-/* ----------------------- System includes ----------------------------------*/
-#include <freertos/FreeRTOS.h>
-#include <freertos/task.h>
-#include <freertos/queue.h>
+ /**********************************************************
+ *	Linux TCP support.
+ *	Based on Walter's project. 
+ *	Modified by Steven Guo <gotop167@163.com>
+ ***********************************************************/
 
 /* ----------------------- Modbus includes ----------------------------------*/
 #include "mb.h"
 #include "mbport.h"
-#include "port.h"
-#include "sdkconfig.h"
+static const char *TAG = "MODBUS_EVENT_C:";
+#define MB_LOG(...) ESP_LOGW(__VA_ARGS__)
 /* ----------------------- Variables ----------------------------------------*/
-static xQueueHandle xQueueHdl;
+static eMBEventType eQueuedEvent;
+static BOOL     xEventInQueue;
 
-#define MB_EVENT_QUEUE_SIZE     (1)
-#define MB_EVENT_QUEUE_TIMEOUT  (pdMS_TO_TICKS(CONFIG_MB_EVENT_QUEUE_TIMEOUT))
-
-BOOL bMBPortIsWithinException(void);
+/* ----------------------- Function prototypes ------------------------------*/
+BOOL            xMBPortTCPPool( void );
 
 /* ----------------------- Start implementation -----------------------------*/
 BOOL
 xMBPortEventInit( void )
 {
-    BOOL bStatus = FALSE;
-    if((xQueueHdl = xQueueCreate(MB_EVENT_QUEUE_SIZE, sizeof(eMBEventType))) != NULL)
-    {
-        vQueueAddToRegistry(xQueueHdl, "MbPortEventQueue");
-        bStatus = TRUE;
-    }
-    return bStatus;
-}
-
-void
-vMBPortEventClose( void )
-{
-    if(xQueueHdl != NULL)
-    {
-        vQueueDelete(xQueueHdl);
-        xQueueHdl = NULL;
-    }
+    xEventInQueue = FALSE;
+    return TRUE;
 }
 
 BOOL
 xMBPortEventPost( eMBEventType eEvent )
 {
-    BOOL bStatus = TRUE;
-    assert(xQueueHdl != NULL);
-    
-    if(bMBPortIsWithinException())
-    {
-        xQueueSendFromISR(xQueueHdl, (const void*)&eEvent, pdFALSE);
-    }
-    else
-    {
-        xQueueSend(xQueueHdl, (const void*)&eEvent, MB_EVENT_QUEUE_TIMEOUT);
-    }
-    return bStatus;
+    xEventInQueue = TRUE;
+    eQueuedEvent = eEvent;
+    return TRUE;
 }
 
 BOOL
-xMBPortEventGet(eMBEventType * peEvent)
+xMBPortEventGet( eMBEventType * eEvent )
 {
-    assert(xQueueHdl != NULL);
-    BOOL xEventHappened = FALSE;
-
-    if (xQueueReceive(xQueueHdl, peEvent, portMAX_DELAY) == pdTRUE) {
+    BOOL            xEventHappened = FALSE;
+	MB_LOG(TAG,"xMBPortEventGet");
+    if( xEventInQueue )
+    {
+        *eEvent = eQueuedEvent;
+        xEventInQueue = FALSE;
         xEventHappened = TRUE;
     }
-    return xEventHappened;
-}
-
-xQueueHandle
-xMBPortEventGetHandle(void)
-{
-    if(xQueueHdl != NULL) //
+    else
     {
-        return xQueueHdl;
+        /* We can't do anything with errors from the pooling module. */
+        ( void )xMBPortTCPPool(  );
     }
-    return NULL;
+    return xEventHappened;
 }
 
