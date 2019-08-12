@@ -193,7 +193,6 @@ eMBInit( eMBMode eMode, UCHAR ucSlaveAddress, UCHAR ucPort, ULONG ulBaudRate, eM
     return eStatus;
 }
 
-#if MB_TCP_ENABLED > 0
 eMBErrorCode
 eMBTCPInit( USHORT ucTCPPort )
 {
@@ -221,7 +220,6 @@ eMBTCPInit( USHORT ucTCPPort )
     }
     return eStatus;
 }
-#endif
 
 eMBErrorCode
 eMBRegisterCB( UCHAR ucFunctionCode, pxMBFunctionHandler pxHandler )

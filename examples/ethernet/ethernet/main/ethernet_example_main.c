@@ -24,6 +24,7 @@
 #include "tcpip_adapter.h"
 #include "driver/gpio.h"
 #include "driver/periph_ctrl.h"
+#include "lwip/sockets.h"
 
 #ifdef CONFIG_PHY_LAN8720
 #include "eth_phy/phy_lan8720.h"
@@ -35,6 +36,10 @@
 #endif
 
 static const char *TAG = "eth_example";
+
+#define DEVICE_IP "192.168.0.103"
+#define DEVICE_GW "192.168.0.1"
+#define DEVICE_NETMASK "255.255.255.0"
 
 #define PIN_PHY_POWER CONFIG_PHY_POWER_PIN
 #define PIN_SMI_MDC CONFIG_PHY_SMI_MDC_PIN
@@ -142,7 +147,7 @@ void app_main()
     ESP_ERROR_CHECK(esp_event_loop_init(eth_event_handler, NULL));
 
     eth_config_t config = DEFAULT_ETHERNET_PHY_CONFIG;
-    config.phy_addr = CONFIG_PHY_ADDRESS;
+    config.phy_addr = PHY1;
     config.gpio_config = eth_gpio_config_rmii;
     config.tcpip_input = tcpip_adapter_eth_input;
     config.clock_mode = CONFIG_PHY_CLOCK_MODE;
@@ -154,4 +159,10 @@ void app_main()
 
     ESP_ERROR_CHECK(esp_eth_init(&config));
     ESP_ERROR_CHECK(esp_eth_enable()) ;
+    tcpip_adapter_dhcpc_stop(TCPIP_ADAPTER_IF_ETH); // Don't run a DHCP client
+    tcpip_adapter_ip_info_t ipInfo;
+                            inet_pton(AF_INET, DEVICE_IP, &ipInfo.ip);
+                            inet_pton(AF_INET, DEVICE_GW, &ipInfo.gw);
+                            inet_pton(AF_INET, DEVICE_NETMASK, &ipInfo.netmask);
+                            tcpip_adapter_set_ip_info(TCPIP_ADAPTER_IF_ETH, &ipInfo);
 }

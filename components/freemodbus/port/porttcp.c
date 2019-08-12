@@ -110,6 +110,9 @@ xMBTCPPortInit( USHORT usTCPPort )
     }
     memset( &serveraddr, 0, sizeof( serveraddr ) );
     serveraddr.sin_family = AF_INET;
+//    serveraddr.sin_addr.s_addr = htonl( 192.168.0.109 );
+//    memcpy((char *) &saddr.sin_addr.s_addr, h->h_addr_list[0], h->h_length); // copy the address 
+//    inet_pton(AF_INET, "192.168.0.103", &serveraddr.sin_addr.s_addr);
     serveraddr.sin_addr.s_addr = htonl( INADDR_ANY );
     serveraddr.sin_port = htons( usPort );
     if( ( xListenSocket = socket( AF_INET, SOCK_STREAM, IPPROTO_TCP ) ) == -1 )
@@ -191,34 +194,34 @@ xMBPortTCPPool( void )
     tval.tv_usec = 5000;
     int             ret;
     USHORT          usLength;
-	MB_LOG(TAG, "xMBPortTCPPool" );
+//	MB_LOG(TAG, "xMBPortTCPPool" );
     if( xClientSocket == INVALID_SOCKET )
     {
-	MB_LOG( TAG, "INVALID_SOCKET");
+//	MB_LOG( TAG, "INVALID_SOCKET");
         /* Accept to client */
         if( ( n = select( xListenSocket + 1, &allset, NULL, NULL, NULL ) ) < 0 )
         {
             if( errno == EINTR )
             {
-		MB_LOG( TAG, "INVALID_SOC1");
+//		MB_LOG( TAG, "INVALID_SOC1");
                 ;
             }
             else
             {
-		MB_LOG( TAG, "INVALID_SOC2");
+//		MB_LOG( TAG, "INVALID_SOC2");
                 ;
             }
         }
         if( FD_ISSET( xListenSocket, &allset ) )
         {
-	MB_LOG( TAG, "FD_ISSET_B");
+//	MB_LOG( TAG, "FD_ISSET_B");
             ( void )prvbMBPortAcceptClient(  );
-	MB_LOG( TAG, "FD_ISSET_A");
+//	MB_LOG( TAG, "FD_ISSET_A");
         }
     }
     while( TRUE )
     {
-	MB_LOG( TAG, "xMBPortPool1");
+//	MB_LOG( TAG, "xMBPortPool1");
         FD_ZERO( &fread );
         FD_SET( xClientSocket, &fread );
         if( ( ( ret = select( xClientSocket + 1, &fread, NULL, NULL, &tval ) ) == SOCKET_ERROR )
@@ -227,7 +230,7 @@ xMBPortTCPPool( void )
             continue;
         }
 	
-	MB_LOG( TAG, "xMBPortPool2");
+//	MB_LOG( TAG, "xMBPortPool2");
         if( ret > 0 )
         {
             if( FD_ISSET( xClientSocket, &fread ) )
@@ -248,7 +251,7 @@ xMBPortTCPPool( void )
                      * unit identifier. */
                     usLength = aucTCPBuf[MB_TCP_LEN] << 8U;
                     usLength |= aucTCPBuf[MB_TCP_LEN + 1];
-			MB_LOG( TAG, "xMBPortPool3");
+//			MB_LOG( TAG, "xMBPortPool3");
 
                     /* Is the frame already complete. */
                     if( usTCPBufPos < ( MB_TCP_UID + usLength ) )
@@ -269,10 +272,10 @@ xMBPortTCPPool( void )
                     }
                 }
 		
-	MB_LOG( TAG, "xMBPortPool4");
+//	MB_LOG( TAG, "xMBPortPool4");
             }
 	
-	MB_LOG( TAG, "xMBPortPool5");
+//	MB_LOG( TAG, "xMBPortPool5");
         }
     }
     return TRUE;

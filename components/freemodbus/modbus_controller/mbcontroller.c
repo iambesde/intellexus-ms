@@ -321,6 +321,7 @@ eMBErrorCode eMBRegInputCB(UCHAR * pucRegBuffer, USHORT usAddress,
     USHORT usRegs = usNRegs;
     eMBErrorCode eStatus = MB_ENOERR;
     USHORT iRegIndex;
+    MB_LOG(TAG, "%s\r\n", __func__);
     // If input or configuration parameters are incorrect then return an error to stack layer
     if ((usAddress >= usInputRegStart)
             && (pucInputBuffer != NULL)
@@ -360,6 +361,7 @@ eMBErrorCode eMBRegHoldingCB(UCHAR * pucRegBuffer, USHORT usAddress,
     USHORT iRegIndex;
     USHORT usRegs = usNRegs;
     // Check input and configuration parameters for correctness
+    MB_LOG(TAG, "%s\r\n", __func__);
     if ((usAddress >= usRegHoldingStart)
             && (pucHoldingBuffer != NULL)
             && ((usAddress + usRegs) <= (usRegHoldingStart + usRegHoldingNregs + 1))
@@ -414,6 +416,7 @@ eMBErrorCode eMBRegCoilsCB(UCHAR* pucRegBuffer, USHORT usAddress,
     USHORT iRegIndex;
     USHORT usCoils = usNCoils;
     usAddress--; // The address is already +1
+    MB_LOG(TAG, "%s\r\n", __func__);
     if ((usAddress >= usRegCoilsStart)
             && (usRegCoilNregs >= 1)
             && ((usAddress + usCoils) <= (usRegCoilsStart + (usRegCoilNregs << 4) + 1))
@@ -470,6 +473,7 @@ eMBErrorCode eMBRegDiscreteCB(UCHAR * pucRegBuffer, USHORT usAddress,
     pucDiscreteInputBuf = (UCHAR*) pucRegDiscreteBuf;
     // It already plus one in modbus function method.
     usAddress--;
+    MB_LOG(TAG, "%s\r\n", __func__);
     if ((usAddress >= usRegDiscreteStart)
             && (usRegDiscreteNregs >= 1)
             && (pucRegDiscreteBuf != NULL)
